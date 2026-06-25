@@ -102,17 +102,25 @@ Most likely scorelines:
 
 ![Spain shot map](reports/figures/shot_map_3943043_Spain.png)
 
+**Interpretation:** Spain generated 16 shots and 1.79 xG, with most attempts concentrated inside or near the penalty area. The two goals came from high-value central zones, which suggests that Spain were able to convert possession and progression into dangerous final actions rather than relying only on low-probability shots from distance.
+
 ### Progressive Passes
 
 ![Spain progressive passes](reports/figures/progressive_passes_3943043_Spain.png)
+
+**Interpretation:** The progressive pass map shows how Spain advanced the ball through different lanes instead of depending on a single route. Several passes break lines into advanced wide and half-space areas, indicating a flexible progression structure and good capacity to move England's defensive block.
 
 ### Score Probability Heatmap
 
 ![Poisson score probability heatmap](reports/figures/score_probability_heatmap.png)
 
+**Interpretation:** The Poisson model, using observed xG as expected goals, gives Spain the highest win probability. The most likely individual scoreline is 1-0 Spain, followed by 2-0 and 1-1. This supports the match reading that Spain created the stronger chance profile, while England still retained a meaningful draw or narrow-win probability.
+
 ### Top Player Radar
 
 ![Top player radar](reports/figures/top_player_radar.png)
+
+**Interpretation:** The radar profile highlights Daniel Olmo as the top-ranked player in the weighted scouting score. His profile is especially strong in defensive activity and xG contribution, making him valuable as a two-way player: involved without the ball, but also capable of arriving into dangerous attacking positions.
 
 ## Repository Structure
 
