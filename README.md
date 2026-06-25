@@ -63,6 +63,11 @@ The dashboard includes:
 
 For Spain vs England, using observed xG as the Poisson input:
 
+| Model | Spain win | Draw | England win |
+| --- | ---: | ---: | ---: |
+| Poisson | 62.8% | 22.6% | 14.7% |
+| Monte Carlo | 62.6% | 23.0% | 14.5% |
+
 ```text
 Poisson model
 Spain win:   62.8%
@@ -77,12 +82,37 @@ England win: 14.5%
 
 Most likely scorelines:
 
+| Scoreline | Result | Probability |
+| --- | --- | ---: |
+| 1-0 | Spain win | 14.5% |
+| 2-0 | Spain win | 13.0% |
+| 1-1 | Draw | 10.5% |
+| 2-1 | Spain win | 9.4% |
+
 ```text
 1-0 Spain: 14.5%
 2-0 Spain: 13.0%
 1-1 Draw:  10.5%
 2-1 Spain:  9.4%
 ```
+
+## Visual Highlights
+
+### Shot Map
+
+![Spain shot map](reports/figures/shot_map_3943043_Spain.png)
+
+### Progressive Passes
+
+![Spain progressive passes](reports/figures/progressive_passes_3943043_Spain.png)
+
+### Score Probability Heatmap
+
+![Poisson score probability heatmap](reports/figures/score_probability_heatmap.png)
+
+### Top Player Radar
+
+![Top player radar](reports/figures/top_player_radar.png)
 
 ## Repository Structure
 
