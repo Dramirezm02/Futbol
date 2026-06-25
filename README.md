@@ -57,6 +57,7 @@ shiny::runApp()
 - **Resumen:** marcador, tiros, xG, precision de pase, tabla por equipo y eventos filtrados.
 - **Ataque:** mapa de tiros y pases progresivos.
 - **Defensa:** presiones, recuperaciones, intercepciones y duelos.
+- **Modelo:** probabilidades de resultado con Poisson, simulacion Monte Carlo y marcadores mas probables.
 - **Scouting:** ranking de jugadores con tiros, xG, pases progresivos, presiones y recuperaciones.
 - **Insights:** recomendaciones deportivas iniciales para convertir datos en decisiones.
 
@@ -88,6 +89,18 @@ Si quieres crear primero los CSV y graficos sin abrir Shiny:
 source("scripts/01_build_statsbomb_dataset.R")
 source("scripts/02_visualize_match.R")
 source("scripts/03_render_report.R")
+source("scripts/04_export_advanced_outputs.R")
+```
+
+Las salidas avanzadas se guardan en:
+
+```text
+reports/tables/poisson_outcome_probabilities.csv
+reports/tables/monte_carlo_probabilities.csv
+reports/tables/top_scorelines_poisson.csv
+reports/tables/advanced_player_ranking.csv
+reports/figures/score_probability_heatmap.png
+reports/figures/top_player_radar.png
 ```
 
 ## Cambiar partido o competicion
@@ -120,8 +133,8 @@ duel_type, interception_outcome, under_pressure, possession
 
 1. Agregar filtros por partido y jugador.
 2. Crear metricas por 90 minutos.
-3. Crear radar chart para scouting.
-4. Agregar modelo simple de similitud de jugadores.
+3. Agregar modelo simple de similitud de jugadores.
+4. Entrenar un modelo predictivo con una muestra historica de partidos.
 5. Escribir un informe ejecutivo de 1 pagina con conclusiones para cuerpo tecnico.
 
 ## Fuente

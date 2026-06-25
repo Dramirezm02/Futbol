@@ -13,6 +13,7 @@ library(tidyr)
 
 source("R/build_statsbomb_dataset.R")
 source("R/visualize_match.R")
+source("R/advanced_analysis.R")
 
 default_competition_id <- 55
 default_season_id <- 282
@@ -140,6 +141,21 @@ data_bundle <- ensure_default_data()
 events_data <- data_bundle$events
 match_data <- data_bundle$match
 teams <- sort(unique(stats::na.omit(events_data$team)))
+player_table_data <- player_advanced_summary(events_data)
+players <- player_table_data |>
+  arrange(desc(scouting_score)) |>
+  pull(player) |>
+  unique()
+model_data <- poisson_match_model(
+  team_summary_for_dashboard(events_data),
+  nested_value(match_data, "home_team"),
+  nested_value(match_data, "away_team")
+)
+simulation_data <- simulate_match_outcomes(
+  team_summary_for_dashboard(events_data),
+  nested_value(match_data, "home_team"),
+  nested_value(match_data, "away_team")
+)
 
 ui <- page_navbar(
   title = "Football Performance Insights",
@@ -160,6 +176,7 @@ ui <- page_navbar(
       selected = "Todos"
     ),
     sliderInput("minute_range", "Minutos", min = 0, max = 120, value = c(0, 120), step = 5),
+    selectInput("player", "Jugador radar", choices = players, selected = players[[1]]),
     helpText("Caso base: UEFA Euro 2024, final Spain vs England.")
   ),
   nav_panel(
@@ -194,8 +211,25 @@ ui <- page_navbar(
     card(card_header("Presiones, recuperaciones, intercepciones y duelos"), plotOutput("defensive_map", height = 620))
   ),
   nav_panel(
+    "Modelo",
+    layout_columns(
+      card(card_header("Probabilidades Poisson"), DTOutput("poisson_outcomes")),
+      card(card_header("Simulacion Monte Carlo"), DTOutput("simulation_outcomes")),
+      col_widths = c(6, 6)
+    ),
+    layout_columns(
+      card(card_header("Marcadores mas probables"), DTOutput("top_scorelines")),
+      card(card_header("Mapa de probabilidad de marcador"), plotOutput("score_heatmap", height = 520)),
+      col_widths = c(4, 8)
+    )
+  ),
+  nav_panel(
     "Scouting",
-    card(card_header("Ranking de jugadores"), DTOutput("player_table"))
+    layout_columns(
+      card(card_header("Ranking avanzado de jugadores"), DTOutput("player_table")),
+      card(card_header("Radar de perfil"), plotOutput("player_radar", height = 520)),
+      col_widths = c(7, 5)
+    )
   ),
   nav_panel(
     "Insights",
@@ -262,10 +296,48 @@ server <- function(input, output, session) {
   })
 
   output$player_table <- renderDT({
-    player_summary(events_data) |>
+    player_table_data |>
       filter(team == input$team) |>
+      select(
+        team,
+        player,
+        position,
+        scouting_score,
+        xg,
+        progressive_passes,
+        progressive_carries,
+        pressures,
+        recoveries,
+        pass_completion_pct
+      ) |>
       mutate(xg = round(xg, 3)) |>
       datatable(options = list(pageLength = 12, scrollX = TRUE), rownames = FALSE)
+  })
+
+  output$poisson_outcomes <- renderDT({
+    model_data$outcome_probabilities |>
+      select(result, probability_pct) |>
+      datatable(options = list(pageLength = 5, dom = "t"), rownames = FALSE)
+  })
+
+  output$simulation_outcomes <- renderDT({
+    simulation_data |>
+      select(result, simulations, probability_pct) |>
+      datatable(options = list(pageLength = 5, dom = "t"), rownames = FALSE)
+  })
+
+  output$top_scorelines <- renderDT({
+    model_data$top_scorelines |>
+      select(scoreline, result, probability_pct) |>
+      datatable(options = list(pageLength = 8, dom = "t"), rownames = FALSE)
+  })
+
+  output$score_heatmap <- renderPlot({
+    plot_score_probability_heatmap(model_data)
+  })
+
+  output$player_radar <- renderPlot({
+    plot_player_radar(player_table_data, input$player)
   })
 
   output$insights <- renderUI({
@@ -279,6 +351,7 @@ server <- function(input, output, session) {
         tags$li("Usar el mapa de tiros para identificar zonas de finalizacion y calidad de ocasiones."),
         tags$li("Revisar los pases progresivos para detectar rutas de avance y jugadores que rompen lineas."),
         tags$li("Cruzar presiones y recuperaciones para evaluar si el equipo recupera cerca del arco rival."),
+        tags$li("Usar el modelo Poisson como una lectura probabilistica basada en xG, no como prediccion definitiva."),
         tags$li(
           if (nrow(opponent) > 0 && selected$xg > opponent$xg) {
             "El equipo genero mayor peligro que el rival; profundizar en mecanismos ofensivos repetibles."

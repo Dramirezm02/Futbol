@@ -30,6 +30,7 @@ library(tidyr)
 
 source("R/build_statsbomb_dataset.R")
 source("R/visualize_match.R")
+source("R/advanced_analysis.R")
 
 result <- build_statsbomb_dataset(
   competition_id = params$competition_id,
@@ -47,6 +48,14 @@ main_team <- summary_table |>
   arrange(desc(xg), desc(shots)) |>
   slice(1) |>
   pull(team)
+poisson_model <- poisson_match_model(summary_table, home_team, away_team)
+simulation_table <- simulate_match_outcomes(summary_table, home_team, away_team)
+advanced_players <- player_advanced_summary(events)
+top_player <- advanced_players |>
+  filter(team == main_team) |>
+  arrange(desc(scouting_score)) |>
+  slice(1) |>
+  pull(player)
 
 shot_report_plot <- function(events, selected_team) {
   shots <- events |>
@@ -141,6 +150,12 @@ Este reporte presenta un analisis de rendimiento del partido **`r home_team` `r 
 
 El objetivo es mostrar una pieza de portafolio alineada con roles de **datos e insights de futbol**: limpieza de datos, metricas deportivas, visualizacion tactica y recomendaciones accionables.
 
+El reporte combina tres niveles de analisis:
+
+- **Estadistica descriptiva:** tiros, goles, pases, precision, acciones defensivas y conducciones.
+- **Metricas futbolisticas intermedias:** xG, mapas de tiro, pases progresivos y acciones por zona.
+- **Estadistica avanzada:** modelo Poisson, simulacion Monte Carlo, probabilidades de resultado y ranking ponderado de scouting.
+
 ```{r kpis}
 kpis <- summary_table |>
   select(team, shots, xg, goals, passes, pass_completion_pct, defensive_events, carries)
@@ -168,6 +183,49 @@ cat(
 )
 ```
 
+# Modelo probabilistico
+
+El modelo usa el **xG de cada equipo como parametro lambda** de una distribucion Poisson. Esto no reemplaza un modelo predictivo entrenado con muchos partidos, pero permite convertir el volumen y calidad de ocasiones del partido en una lectura probabilistica clara.
+
+```{r poisson-lambdas}
+lambda_table <- tibble::tibble(
+  team = c(home_team, away_team),
+  lambda_xg = c(poisson_model$lambda_a, poisson_model$lambda_b)
+)
+
+knitr::kable(lambda_table, caption = "Parametros lambda usados por el modelo Poisson", digits = 3)
+```
+
+## Probabilidades de resultado
+
+```{r poisson-outcomes}
+poisson_model$outcome_probabilities |>
+  select(result, probability_pct) |>
+  knitr::kable(caption = "Probabilidades de resultado con modelo Poisson")
+```
+
+## Simulacion Monte Carlo
+
+Se simularon 10.000 partidos usando los xG observados como media esperada de goles para cada equipo.
+
+```{r monte-carlo}
+simulation_table |>
+  select(result, simulations, probability_pct) |>
+  knitr::kable(caption = "Probabilidades de resultado con simulacion Monte Carlo")
+```
+
+## Marcadores mas probables
+
+```{r top-scorelines}
+poisson_model$top_scorelines |>
+  select(scoreline, result, probability_pct) |>
+  knitr::kable(caption = "Marcadores mas probables")
+```
+
+```{r score-heatmap, fig.height=7}
+plot_score_probability_heatmap(poisson_model)
+```
+
 # Analisis ofensivo
 
 ## Mapa de tiros
@@ -191,12 +249,31 @@ defensive_report_plot(events, main_team)
 # Scouting inicial
 
 ```{r player-ranking}
-player_report_summary(events) |>
+advanced_players |>
   filter(team == main_team) |>
+  select(
+    player,
+    position,
+    scouting_score,
+    xg,
+    progressive_passes,
+    progressive_carries,
+    pressures,
+    recoveries,
+    pass_completion_pct
+  ) |>
   mutate(xg = round(xg, 3)) |>
-  arrange(desc(xg), desc(progressive_passes), desc(pressures)) |>
+  arrange(desc(scouting_score), desc(xg)) |>
   slice_head(n = 12) |>
-  knitr::kable(caption = paste("Ranking inicial de jugadores -", main_team))
+  knitr::kable(caption = paste("Ranking avanzado de jugadores -", main_team))
+```
+
+## Radar del jugador mejor rankeado
+
+El radar combina cinco dimensiones normalizadas de 0 a 100: xG, progresion, defensa, involucramiento y score general de scouting.
+
+```{r scouting-radar, fig.height=6}
+plot_player_radar(advanced_players, top_player)
 ```
 
 # Recomendaciones deportivas
@@ -215,6 +292,7 @@ if (selected$xg > opponent$xg) {
 }
 
 cat("- Para scouting, convertir estas metricas a valores por 90 minutos y comparar jugadores por posicion.\n")
+cat("- Para modelado, usar el Poisson y Monte Carlo como capa explicativa inicial; el siguiente paso seria entrenar con una muestra historica de partidos.\n")
 ```
 
 # Datos y reproducibilidad
