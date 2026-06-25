@@ -52,5 +52,10 @@ rsconnect/
 # Project generated data
 data/raw/
 data/processed/
-reports/figures/
-reports/tables/
+
+# Portfolio outputs kept in GitHub
+!reports/
+!reports/figures/
+!reports/figures/*.png
+!reports/tables/
+!reports/tables/*.csv
