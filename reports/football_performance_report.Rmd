@@ -1,0 +1,229 @@
+---
+title: "Football Performance Insights"
+subtitle: "Analisis estadistico de rendimiento y scouting con StatsBomb Open Data"
+author: "Dramirezm02"
+date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    self_contained: true
+params:
+  competition_id: 55
+  season_id: 282
+  match_id: 3943043
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 6)
+
+library(dplyr)
+library(ggplot2)
+library(httr2)
+library(jsonlite)
+library(purrr)
+library(readr)
+library(stringr)
+library(tibble)
+library(tidyr)
+
+source("R/build_statsbomb_dataset.R")
+source("R/visualize_match.R")
+
+result <- build_statsbomb_dataset(
+  competition_id = params$competition_id,
+  season_id = params$season_id,
+  match_id = params$match_id
+)
+
+events <- result$events
+match <- result$match
+summary_table <- result$summary
+
+home_team <- nested_value(match, "home_team")
+away_team <- nested_value(match, "away_team")
+main_team <- summary_table |>
+  arrange(desc(xg), desc(shots)) |>
+  slice(1) |>
+  pull(team)
+
+shot_report_plot <- function(events, selected_team) {
+  shots <- events |>
+    filter(event_type == "Shot", team == selected_team)
+
+  ggplot(shots) +
+    draw_pitch() +
+    geom_point(
+      aes(
+        x = location_x,
+        y = location_y,
+        size = replace_na(shot_xg, 0),
+        color = shot_outcome == "Goal"
+      ),
+      alpha = 0.82
+    ) +
+    scale_size_continuous(range = c(3, 13), guide = "none") +
+    scale_color_manual(values = c(`TRUE` = "#ff5a3d", `FALSE` = "#2364aa"), guide = "none") +
+    labs(title = paste("Mapa de tiros -", selected_team))
+}
+
+progressive_pass_report_plot <- function(events, selected_team) {
+  progressive <- events |>
+    filter(
+      event_type == "Pass",
+      team == selected_team,
+      is.na(pass_outcome),
+      !is.na(location_x),
+      !is.na(pass_end_x)
+    ) |>
+    mutate(progress = pass_end_x - location_x) |>
+    filter(progress >= 15) |>
+    arrange(desc(progress)) |>
+    slice_head(n = 45)
+
+  ggplot(progressive) +
+    draw_pitch() +
+    geom_segment(
+      aes(x = location_x, y = location_y, xend = pass_end_x, yend = pass_end_y),
+      arrow = arrow(length = grid::unit(0.16, "cm")),
+      color = "#23835b",
+      alpha = 0.72,
+      linewidth = 0.7
+    ) +
+    labs(title = paste("Pases progresivos -", selected_team))
+}
+
+defensive_report_plot <- function(events, selected_team) {
+  defensive <- events |>
+    filter(
+      team == selected_team,
+      event_type %in% c("Pressure", "Ball Recovery", "Interception", "Duel"),
+      !is.na(location_x),
+      !is.na(location_y)
+    )
+
+  ggplot(defensive) +
+    draw_pitch() +
+    geom_point(aes(x = location_x, y = location_y, color = event_type), alpha = 0.62, size = 2.2) +
+    scale_color_manual(
+      values = c(
+        "Pressure" = "#ff8c42",
+        "Ball Recovery" = "#23835b",
+        "Interception" = "#2364aa",
+        "Duel" = "#6d597a"
+      )
+    ) +
+    labs(title = paste("Acciones defensivas -", selected_team), color = NULL) +
+    theme(legend.position = "bottom")
+}
+
+player_report_summary <- function(events) {
+  events |>
+    filter(!is.na(player), !is.na(team)) |>
+    group_by(team, player, position) |>
+    summarise(
+      shots = sum(event_type == "Shot", na.rm = TRUE),
+      xg = sum(shot_xg, na.rm = TRUE),
+      passes = sum(event_type == "Pass", na.rm = TRUE),
+      progressive_passes = sum(event_type == "Pass" & is.na(pass_outcome) & (pass_end_x - location_x) >= 15, na.rm = TRUE),
+      pressures = sum(event_type == "Pressure", na.rm = TRUE),
+      recoveries = sum(event_type == "Ball Recovery", na.rm = TRUE),
+      carries = sum(event_type == "Carry", na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+```
+
+# Resumen ejecutivo
+
+Este reporte presenta un analisis de rendimiento del partido **`r home_team` `r match$home_score`-`r match$away_score` `r away_team`**, jugado el **`r match$match_date`**, usando datos abiertos de eventos de StatsBomb.
+
+El objetivo es mostrar una pieza de portafolio alineada con roles de **datos e insights de futbol**: limpieza de datos, metricas deportivas, visualizacion tactica y recomendaciones accionables.
+
+```{r kpis}
+kpis <- summary_table |>
+  select(team, shots, xg, goals, passes, pass_completion_pct, defensive_events, carries)
+
+knitr::kable(
+  kpis,
+  caption = "Indicadores principales por equipo",
+  digits = 3
+)
+```
+
+# Lectura del partido
+
+```{r narrative}
+leader <- summary_table |> arrange(desc(xg), desc(shots)) |> slice(1)
+opponent <- summary_table |> filter(team != leader$team) |> slice(1)
+
+cat(
+  paste0(
+    "**", leader$team, "** genero el mayor volumen ofensivo: ",
+    leader$shots, " tiros y ", leader$xg, " xG. ",
+    "Su precision de pase fue de ", leader$pass_completion_pct, "%, ",
+    "frente a ", opponent$pass_completion_pct, "% del rival."
+  )
+)
+```
+
+# Analisis ofensivo
+
+## Mapa de tiros
+
+```{r shot-map}
+shot_report_plot(events, main_team)
+```
+
+## Pases progresivos
+
+```{r progressive-passes}
+progressive_pass_report_plot(events, main_team)
+```
+
+# Analisis defensivo
+
+```{r defensive-map}
+defensive_report_plot(events, main_team)
+```
+
+# Scouting inicial
+
+```{r player-ranking}
+player_report_summary(events) |>
+  filter(team == main_team) |>
+  mutate(xg = round(xg, 3)) |>
+  arrange(desc(xg), desc(progressive_passes), desc(pressures)) |>
+  slice_head(n = 12) |>
+  knitr::kable(caption = paste("Ranking inicial de jugadores -", main_team))
+```
+
+# Recomendaciones deportivas
+
+```{r recommendations, results='asis'}
+selected <- summary_table |> filter(team == main_team)
+
+cat("- Priorizar el analisis de las zonas de finalizacion donde el equipo acumula mayor xG.\n")
+cat("- Revisar los jugadores con mas pases progresivos para identificar rutas de avance repetibles.\n")
+cat("- Cruzar presiones, recuperaciones e intercepciones para evaluar la agresividad tras perdida.\n")
+
+if (selected$xg > opponent$xg) {
+  cat("- El equipo genero mas peligro que el rival; conviene profundizar en los mecanismos ofensivos que produjeron esas ventajas.\n")
+} else {
+  cat("- El rival genero igual o mayor peligro; conviene revisar perdidas, duelos y zonas concedidas.\n")
+}
+
+cat("- Para scouting, convertir estas metricas a valores por 90 minutos y comparar jugadores por posicion.\n")
+```
+
+# Datos y reproducibilidad
+
+Fuente: [StatsBomb Open Data](https://github.com/statsbomb/open-data).
+
+El proyecto completo incluye:
+
+- Dashboard Shiny en `app.R`.
+- Scripts de descarga y limpieza en `R/`.
+- Reporte reproducible en `reports/football_performance_report.Rmd`.
+- HTML publicable en `docs/index.html`.

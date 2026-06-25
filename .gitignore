@@ -39,11 +39,18 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# pkgdown site
-docs/
+# GitHub Pages output
+!docs/
+!docs/index.html
 
 # translation temp files
 po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Project generated data
+data/raw/
+data/processed/
+reports/figures/
+reports/tables/
