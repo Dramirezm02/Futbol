@@ -53,6 +53,12 @@ After deployment, shinyapps.io will give you a public URL similar to:
 https://your-account.shinyapps.io/futbol/
 ```
 
+Current deployed dashboard:
+
+```text
+https://71skou-daniela-ramirez0montoya.shinyapps.io/FUTBOL/
+```
+
 ## Add the Live App URL to GitHub
 
 Once you have the public URL, add it to `README.md` under a section like:

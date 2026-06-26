@@ -61,15 +61,11 @@ The dashboard includes:
 
 ## Live Shiny App
 
+Interactive dashboard:
+
+[Open the Shiny app](https://71skou-daniela-ramirez0montoya.shinyapps.io/FUTBOL/)
+
 The Shiny dashboard source code is available in `app.R`.
-
-GitHub stores the code, but it does not run Shiny apps directly. To publish the interactive dashboard online, deploy it to ShinyApps.io or Posit Connect Cloud, then add the public app URL here.
-
-Deployment instructions are available in:
-
-```text
-DEPLOY_SHINY.md
-```
 
 ## Main Results
 
