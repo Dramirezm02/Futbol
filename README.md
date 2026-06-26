@@ -59,6 +59,18 @@ The dashboard includes:
 - **Scouting:** advanced player ranking and radar profile.
 - **Insights:** practical football recommendations based on the analysis.
 
+## Live Shiny App
+
+The Shiny dashboard source code is available in `app.R`.
+
+GitHub stores the code, but it does not run Shiny apps directly. To publish the interactive dashboard online, deploy it to ShinyApps.io or Posit Connect Cloud, then add the public app URL here.
+
+Deployment instructions are available in:
+
+```text
+DEPLOY_SHINY.md
+```
+
 ## Main Results
 
 For Spain vs England, using observed xG as the Poisson input:
